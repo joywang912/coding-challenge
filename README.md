@@ -1,5 +1,12 @@
 # 9Spokes Coding Challenge
 
+## Setup
+npm install
+
+## Running
+node index
+
+# Original Documents
 ## Overview
 
 This repo contains the instructions and the data you need to complete the _9Spokes coding challenge_.  This challenge is not intended to be complex, but it is an opportunity for you to showcase your understanding and applying of good development practices.
