@@ -9,6 +9,16 @@ const isArray = require("lodash/isArray");
 const formatPercentage = (num) => `${(num * 100).toFixed(1)}%`;
 
 /**
+ * Funcion to format dollar value with comma, and remove cents
+ * @param {Number} num
+ */
+const dollarFormat = (num) => {
+  const parts = num.toString().split(".");
+  let result = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `$${result}`;
+};
+
+/**
  * Function to get sum of total_value in the list,
  * which filter by category, valueType, accountType if exist
  * @param {Array} list
@@ -109,10 +119,10 @@ if (financialList) {
   const expenseTotal = getTotalValue(financialList, "expense");
 
   // Print Revenue
-  console.log(`Revenue: $${revenueTotal}`);
+  console.log(`Revenue: ${dollarFormat(revenueTotal)}`);
 
   // Print Expenses
-  console.log(`Expenses: $${expenseTotal}`);
+  console.log(`Expenses: ${dollarFormat(expenseTotal)}`);
 
   // Print Gross Profit Margin
   console.log(
