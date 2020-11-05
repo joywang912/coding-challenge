@@ -1,48 +1,97 @@
 const fs = require("fs");
 const sumBy = require("lodash/sumBy");
+const isArray = require("lodash/isArray");
 
 /**
- * Format number to percentage with 1 decimal
+ * Function to format number to percentage with 1 decimal
  * @param {Number} num
  */
 const formatPercentage = (num) => `${(num * 100).toFixed(1)}%`;
 
 /**
- * Function to calculate sum of total_value in the list,
- * and filter by category if exist
+ * Function to get sum of total_value in the list,
+ * which filter by category, valueType, accountType if exist
  * @param {Array} list
  * @param {String} category
+ * @param {String} valueType
+ * @param {String | Array<String>} accountType
  */
-const getTotalValueByCategory = (list, category = "") => {
-  const calcList = category
+const getTotalValue = (
+  list,
+  category = "",
+  valueType = "",
+  accountType = ""
+) => {
+  let calcList = category
     ? list.filter((el) => el.account_category === category)
     : list;
+
+  if (valueType) {
+    calcList = calcList.filter((el) => el.value_type === valueType);
+  }
+
+  if (accountType && accountType.length) {
+    calcList = calcList.filter((el) => {
+      return isArray(accountType)
+        ? accountType.indexOf(el.account_type) > -1
+        : el.account_type === accountType;
+    });
+  }
 
   return sumBy(calcList, "total_value");
 };
 
 /**
- * Function to calculate gorss profit margin according to
+ * Function to calculate pecentage of gorss profit margin according to
  * finanical list and total revenue
  * @param {Array} list
  * @param {Number} revenue
  */
-const calcGrossProfitMargin = (list, revenue) => {
-  const salesDebitList = list.filter(
-    (el) => el.account_type === "sales" && el.value_type === "debit"
-  );
-  const salesDebitAmount = getTotalValueByCategory(salesDebitList);
-
-  return salesDebitAmount / revenue;
+const getGrossProfitMarginPct = (list, revenue) => {
+  const salesDebitAmount = getTotalValue(list, null, "debit", "sales");
+  const grossProfitMargin = salesDebitAmount / revenue;
+  return formatPercentage(grossProfitMargin);
 };
 
 /**
- * Function to calculate net profit margin by expenses and revenue
+ * Function to calculate pecentage of net profit margin by expenses and revenue
  * @param {Number} expenses
  * @param {Number} revenue
  */
-const calcNetProfitMargin = (expenses, revenue) => {
-  return (revenue - expenses) / revenue;
+const getNetProfitMarginPct = (expenses, revenue) => {
+  const netProfitMargin = (revenue - expenses) / revenue;
+  return formatPercentage(netProfitMargin);
+};
+
+/**
+ * Function to calculate pecentage of working Capital by finanical list
+ * @param {Array} list
+ */
+const getWorkingCapitalRatioPct = (list) => {
+  const assetsAccoutTypes = ["current", "bank", "current_accounts_receivable"];
+  const liabilityAccountTypes = ["current", "current_accounts_payable"];
+  const assetsDebit = getTotalValue(list, "assets", "debit", assetsAccoutTypes);
+  const assetsCredit = getTotalValue(
+    list,
+    "assets",
+    "credit",
+    assetsAccoutTypes
+  );
+  const liabilityDebit = getTotalValue(
+    list,
+    "liability",
+    "debit",
+    liabilityAccountTypes
+  );
+  const liabilityCredit = getTotalValue(
+    list,
+    "liability",
+    "credit",
+    liabilityAccountTypes
+  );
+  const workingCapitRatio =
+    (assetsDebit - assetsCredit) / (liabilityCredit - liabilityDebit);
+  return formatPercentage(workingCapitRatio);
 };
 
 /**
@@ -56,19 +105,32 @@ const financialList = dataObj && dataObj.data;
  * Check if finanical list exist and print results
  */
 if (financialList) {
-  const revenueTotal = getTotalValueByCategory(financialList, "revenue");
-  const expenseTotal = getTotalValueByCategory(financialList, "expense");
-  const grossProfitMargin = calcGrossProfitMargin(financialList, revenueTotal);
-  const netProfitMargin = calcNetProfitMargin(expenseTotal, revenueTotal);
+  const revenueTotal = getTotalValue(financialList, "revenue");
+  const expenseTotal = getTotalValue(financialList, "expense");
 
   // Print Revenue
   console.log(`Revenue: $${revenueTotal}`);
+
   // Print Expenses
   console.log(`Expenses: $${expenseTotal}`);
+
   // Print Gross Profit Margin
-  console.log(`Gross Profit Margin: ${formatPercentage(grossProfitMargin)}`);
+  console.log(
+    `Gross Profit Margin: ${getGrossProfitMarginPct(
+      financialList,
+      revenueTotal
+    )}`
+  );
+
   // Print Net Profit Margin
-  console.log(`Net Profit Margin: ${formatPercentage(netProfitMargin)}`);
+  console.log(
+    `Net Profit Margin: ${getNetProfitMarginPct(expenseTotal, revenueTotal)}`
+  );
+
+  // Print Working Capital Ratio
+  console.log(
+    `Working Capital Ratio: ${getWorkingCapitalRatioPct(financialList)}`
+  );
 } else {
   console.error("Finanical list not found.");
 }
